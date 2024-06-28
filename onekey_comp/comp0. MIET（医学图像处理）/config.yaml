@@ -1,0 +1,6 @@
+# 你的数据存放位置，循环查找所有的数据目录，找到所有的nii.gz数据
+rad_dir: ONEKEYDS_HOME/CT/images
+# 超分重建的放大倍数，目前支持2倍和4倍的超分重建比例。
+scale: 4
+# 数据保存位置。
+save_dir: .
