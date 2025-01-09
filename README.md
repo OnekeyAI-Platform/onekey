@@ -121,6 +121,8 @@ Our multi-instance learning approach aimed to enhance predictive accuracy by int
 
 For the aggregated multi-instance learning features, we utilized dimensionality reduction techniques such as t-tests, correlation coefficients, and Lasso regularization to refine our feature set. These features were modeled using popular machine learning algorithms including Logistic Regression and ExtraTrees. To address sample imbalance, we employed the SMOTE method during the training process. To ensure model robustness, we applied 5-fold cross-validation within the training dataset and optimized hyperparameters via Grid-Search. 
 
+#### Data preprocessing and model development were conducted using Python (version 3.7.12) and the deep learning platform Anaconda (version 3). Python packages used in the analysis included Pandas v.1.2.4, NumPy v.1.20.2, PyTorch v.1.8.0, Onekey v.2.2.3, Seaborn v.0.11.1, Matplotlib v.3.4.2.
+
 #### Ensemble Fusion Method
 Leveraging the concept of ensemble methods, we combined the predicted probabilities from different cross-sectional images of the same patient to enhance predictive performance and robustness. Specifically, we implemented two distinct approaches to perform this ensemble fusion: using the maximum and the average values of the predictions. 
 
