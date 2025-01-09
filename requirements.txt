@@ -11,3 +11,4 @@ pynrrd
 statsmodels
 imblearn
 joblib
+onekey
