@@ -121,6 +121,8 @@ Our multi-instance learning approach aimed to enhance predictive accuracy by int
 
 For the aggregated multi-instance learning features, we utilized dimensionality reduction techniques such as t-tests, correlation coefficients, and Lasso regularization to refine our feature set. These features were modeled using popular machine learning algorithms including Logistic Regression and ExtraTrees. To address sample imbalance, we employed the SMOTE method during the training process. To ensure model robustness, we applied 5-fold cross-validation within the training dataset and optimized hyperparameters via Grid-Search. 
 
+#### Data preprocessing and model development were conducted using Python (version 3.7.12) and the deep learning platform Anaconda (version 3). Python packages used in the analysis included Pandas v.1.2.4, NumPy v.1.20.2, PyTorch v.1.8.0, Onekey v.2.2.3, Seaborn v.0.11.1, Matplotlib v.3.4.2.
+
 #### Ensemble Fusion Method
 Leveraging the concept of ensemble methods, we combined the predicted probabilities from different cross-sectional images of the same patient to enhance predictive performance and robustness. Specifically, we implemented two distinct approaches to perform this ensemble fusion: using the maximum and the average values of the predictions. 
 
@@ -165,4 +167,14 @@ OnekeyAI represents a significant advancement in the field of medical data analy
 20. **Yang, J., Liu, L., Wang, S.** (2020). Machine Learning-Based Radiomics for Prediction of Epidermal Growth Factor Receptor Mutations in Lung Adenocarcinoma. *Scientific Reports*.
 21. **Zhang, X., Li, Y., Chen, H.** (2021). Predicting EGFR mutation status in lung adenocarcinoma presenting as ground-glass opacity utilizing radiomics model in clinical translation. *Thoracic Cancer*.
 22. **Liu, B., Chen, D., Zhang, Y.** (2020). Molecular subtyping of diffuse gliomas using magnetic resonance. *Neuro-Oncology*.
-
+23.	Jiang, Y. et al. Biology-guided deep learning predicts prognosis and cancer immunotherapy response. Nature Communications 14 (2023). https://doi.org:10.1038/s41467-023-40890-x
+24.	Kong, J. et al. Computer-aided evaluation of neuroblastoma on whole-slide histology images: Classifying grade of neuroblastic differentiation. Pattern Recognition 42, 1080-1092 (2009). https://doi.org:10.1016/j.patcog.2008.10.035
+25.	Liu, Y. et al. Pathological prognosis classification of patients with neuroblastoma using computational pathology analysis. Computers in Biology and Medicine 149 (2022). https://doi.org:10.1016/j.compbiomed.2022.105980
+26.	Gheisari, S., Catchpoole, D. R., Charlton, A. & Kennedy, P. J. Convolutional Deep Belief Network with Feature Encoding for Classification of Neuroblastoma Histological Images. Journal of Pathology Informatics 9 (2018). https://doi.org:10.4103/jpi.jpi_73_17
+27.	Shouval, R., Fein, J. A., Savani, B., Mohty, M. & Nagler, A. Machine learning and artificial intelligence in haematology. British Journal of Haematology 192, 239-250 (2020). https://doi.org:10.1111/bjh.16915
+28.	Chen, P. et al. Detection of Metastatic Tumor Cells in the Bone Marrow Aspirate Smears by Artificial Intelligence (AI)-Based Morphogo System. Frontiers in Oncology 11 (2021). https://doi.org:10.3389/fonc.2021.742395
+29.	Claveau, J.-S. et al. Value of bone marrow examination in determining response to therapy in patients with multiple myeloma in the context of mass spectrometry-based M-protein assessment. Leukemia 37, 1-4 (2022). https://doi.org:10.1038/s41375-022-01779-8
+30.	Fu, X., Sahai, E. & Wilkins, A. Application of digital pathology‐based advanced analytics of tumour microenvironment organisation to predict prognosis and therapeutic response. The Journal of Pathology 260, 578-591 (2023). https://doi.org:10.1002/path.6153
+31.	Elsayed, B. et al. Deep learning enhances acute lymphoblastic leukemia diagnosis and classification using bone marrow images. Frontiers in Oncology 13 (2023). https://doi.org:10.3389/fonc.2023.1330977
+32.	Hazra, D., Byun, Y.-C. & Kim, W. J. Enhancing classification of cells procured from bone marrow aspirate smears using generative adversarial networks and sequential convolutional neural network. Computer Methods and Programs in Biomedicine 224 (2022). https://doi.org:10.1016/j.cmpb.2022.107019
+33.	Wu, Y.-Y. et al. A Hematologist-Level Deep Learning Algorithm (BMSNet) for Assessing the Morphologies of Single Nuclear Balls in Bone Marrow Smears: Algorithm Development. JMIR Medical Informatics 8 (2020). https://doi.org:10.2196/15963
