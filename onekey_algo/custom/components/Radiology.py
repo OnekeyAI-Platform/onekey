@@ -26,6 +26,271 @@ radiomics.logger.setLevel(logging.ERROR)
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
+
+def compute_derivatives(volume):
+    # 使用高斯滤波对数据进行平滑处理，减少噪声影响
+    smoothed = gaussian_filter(volume, sigma=1)
+
+    # 计算一阶和二阶导数
+    grad_x = np.gradient(smoothed, axis=0)
+    grad_y = np.gradient(smoothed, axis=1)
+    grad_z = np.gradient(smoothed, axis=2)
+
+    grad_xx = np.gradient(grad_x, axis=0)
+    grad_yy = np.gradient(grad_y, axis=1)
+    grad_zz = np.gradient(grad_z, axis=2)
+    grad_xy = np.gradient(grad_x, axis=1)
+    grad_xz = np.gradient(grad_x, axis=2)
+    grad_yz = np.gradient(grad_y, axis=2)
+
+    return grad_xx, grad_yy, grad_zz, grad_xy, grad_xz, grad_yz
+
+
+def compute_hessian_features(volume, mask):
+    if isinstance(volume, SimpleITK.Image) or isinstance(mask, SimpleITK.Image):
+        volume = SimpleITK.GetArrayFromImage(volume)
+        mask = SimpleITK.GetArrayFromImage(mask)
+    grad_xx, grad_yy, grad_zz, grad_xy, grad_xz, grad_yz = compute_derivatives(volume)
+    hessian_features = []
+
+    # 遍历每个体素
+    for i in range(volume.shape[0]):
+        for j in range(volume.shape[1]):
+            for k in range(volume.shape[2]):
+                # 构造每个体素的海森矩阵
+                H = np.array([
+                    [grad_xx[i, j, k], grad_xy[i, j, k], grad_xz[i, j, k]],
+                    [grad_xy[i, j, k], grad_yy[i, j, k], grad_yz[i, j, k]],
+                    [grad_xz[i, j, k], grad_yz[i, j, k], grad_zz[i, j, k]]
+                ])
+
+                # 计算特征值
+                eigvals = np.linalg.eigvals(H)
+                if mask[i, j, k] == 1:
+                    hessian_features.append(eigvals)
+
+    # 转换为numpy数组以方便进一步处理
+    hessian_features = np.array(hessian_features)
+    featurs = {}
+    featurs.update(get_stats_features(hessian_features[:, 0], prefix='AxisX'))
+    featurs.update(get_stats_features(hessian_features[:, 1], prefix='AxisY'))
+    featurs.update(get_stats_features(hessian_features[:, 2], prefix='AxisZ'))
+    return featurs
+
+
+def box_counting(data, box_size):
+    """
+    计算给定box大小下非空box的数量
+    """
+    sampled_data = zoom(data, zoom=1 / box_size, order=0)
+    return np.sum(sampled_data > 0)
+
+
+def compute_curvature(vertices, faces):
+    """
+    计算曲率：高斯曲率和平均曲率
+    """
+    gaussian_curvature = np.zeros(len(vertices))
+    mean_curvature = np.zeros(len(vertices))
+
+    # 邻接表
+    vertex_faces = {v: [] for v in range(len(vertices))}
+    for face_id, face in enumerate(faces):
+        for v in face:
+            vertex_faces[v].append(face_id)
+
+    # 计算每个顶点的曲率
+    for i, vertex in enumerate(vertices):
+        adjacent_faces = [faces[fid] for fid in vertex_faces[i]]
+        edge_vectors = []
+        area_sum = 1e-6
+
+        for face in adjacent_faces:
+            v0, v1, v2 = vertices[face[0]], vertices[face[1]], vertices[face[2]]
+            edge_vectors.append(v1 - v0)
+            edge_vectors.append(v2 - v0)
+
+            area = np.linalg.norm(np.cross(v1 - v0, v2 - v0)) / 2
+            area_sum += area
+
+        gaussian_curvature[i] = (2 * np.pi - np.sum(edge_vectors)) / area_sum
+        mean_curvature[i] = np.sum([np.linalg.norm(e) for e in edge_vectors]) / area_sum
+
+    return gaussian_curvature, mean_curvature
+
+
+def get_percentile(arr, percentiles=None, prefix=''):
+    if percentiles is None:
+        percentiles = [i * 10 for i in range(1, 10)]
+    features = {}
+    for percentile in percentiles:
+        pstr = f'{percentile}Percentile'
+        value = np.percentile(arr, percentile)
+        features[f"{prefix}{pstr}"] = value
+    return features
+
+
+def get_stats_features(arr, percentiles=None, prefix=''):
+    features = {}
+    features[f"{prefix}Min"] = np.min(arr)
+    features[f"{prefix}Max"] = np.max(arr)
+    features[f"{prefix}Mean"] = np.mean(arr)
+    features[f"{prefix}Std"] = np.std(arr)
+    features.update(get_percentile(arr, percentiles, prefix))
+    return features
+
+
+# 提取特征
+def compute_topology_features(mask, mask_spec_id=1):
+    fnames = ['original_topology_Volume', 'original_topology_SurfaceArea', 'original_topology_ConvexVolume',
+              'original_topology_EulerCharacteristic',
+              'original_topology_GaussianCurvatureMean', 'original_topology_GaussianCurvatureSTD',
+              'original_topology_GaussianCurvatureMin', 'original_topology_GaussianCurvatureMax',
+              'original_topology_MeanCurvatureMean', 'original_topology_MeanCurvatureSTD',
+              'original_topology_MeanCurvatureMin', 'original_topology_MeanCurvatureMax',
+              'original_topology_Skeleton Length',
+              'original_topology_GaussianCurvature10Percentile',
+              'original_topology_GaussianCurvature20Percentile', 'original_topology_GaussianCurvature30Percentile',
+              'original_topology_GaussianCurvature40Percentile', 'original_topology_GaussianCurvature50Percentile',
+              'original_topology_GaussianCurvature60Percentile', 'original_topology_GaussianCurvature70Percentile',
+              'original_topology_GaussianCurvature80Percentile', 'original_topology_GaussianCurvature90Percentile',
+              'original_topology_MeanCurvature10Percentile', 'original_topology_MeanCurvature20Percentile',
+              'original_topology_MeanCurvature30Percentile', 'original_topology_MeanCurvature40Percentile',
+              'original_topology_MeanCurvature50Percentile', 'original_topology_MeanCurvature60Percentile',
+              'original_topology_MeanCurvature70Percentile', 'original_topology_MeanCurvature80Percentile',
+              'original_topology_MeanCurvature90Percentile']
+    try:
+        if mask_spec_id is None:
+            mask = (mask != 0).astype(np.uint8)
+        else:
+            mask = (mask == mask_spec_id).astype(np.uint8)
+        labeled_matrix, num_features = label(mask)
+        region = mask
+        # 形态学特征提取
+        props = regionprops(region.astype(int))[0]
+        volume = props.area  # 体积
+        bbox = props.bbox  # 包围盒
+        centroid = props.centroid  # 质心
+        convex_hull = ConvexHull(props.coords)  # 凸包
+        convex_volume = convex_hull.volume  # 凸包体积
+
+        # 提取表面网格
+        verts, faces, normals, values = marching_cubes(region, level=0)
+        surface_area = np.sum(np.linalg.norm(np.cross(
+            verts[faces[:, 1]] - verts[faces[:, 0]],
+            verts[faces[:, 2]] - verts[faces[:, 0]],
+        ), axis=1)) / 2
+
+        # 欧拉特征数（拓扑学）
+        euler_characteristic = len(verts) - len(faces)
+
+        # 计算高斯曲率和平均曲率
+        gaussian_curvature, mean_curvature = compute_curvature(verts, faces)
+
+        # 计算骨架（线性特征长度）
+        skeleton = skeletonize_3d(region)
+        skeleton_length = np.sum(skeleton)
+
+        # 记录特征
+        features = {
+            "Volume": volume,
+            "SurfaceArea": surface_area,
+            "ConvexVolume": convex_volume,
+            "EulerCharacteristic": euler_characteristic,
+            "GaussianCurvatureMean": np.mean(gaussian_curvature),
+            "GaussianCurvatureSTD": np.mean(gaussian_curvature),
+            "GaussianCurvatureMin": np.min(gaussian_curvature),
+            "GaussianCurvatureMax": np.max(gaussian_curvature),
+            "MeanCurvatureMean": np.mean(mean_curvature),
+            "MeanCurvatureSTD": np.mean(mean_curvature),
+            "MeanCurvatureMin": np.min(mean_curvature),
+            "MeanCurvatureMax": np.max(mean_curvature),
+            "Skeleton Length": skeleton_length,
+        }
+        features.update(get_percentile(gaussian_curvature, prefix='GaussianCurvature'))
+        features.update(get_percentile(gaussian_curvature, prefix='MeanCurvature'))
+
+        return {f"original_topology_{k}": v for k, v in features.items()}
+    except Exception as e:
+        error_info = str(e).split('\n')[0]
+        logger.error(f"提取拓扑学特征失败：{error_info}")
+        return {fn: np.nan for fn in fnames}
+
+
+def fractal_dimension_statistics_adjusted(data, max_box_size=None):
+    """
+    计算三维矩阵的分形维数，并返回其min、max、mean、std等统计指标
+    """
+    min_box_size = 1
+    if max_box_size is None:
+        max_box_size = min(data.shape)
+
+    # 存储分形维数
+    fractal_dimensions = []
+    fractal_lacunarity = []
+
+    # 遍历不同的最大box大小
+    for box_size in np.logspace(np.log10(min_box_size), np.log10(max_box_size), num=10, endpoint=True, dtype=int):
+        if box_size < 1:
+            continue
+        #
+        x, y, z = data.shape
+        sums = []
+
+        # Slide the box through the 3D volume
+        for i in range(0, x - box_size + 1, box_size):
+            for j in range(0, y - box_size + 1, box_size):
+                for k in range(0, z - box_size + 1, box_size):
+                    # Extract the 3D window
+                    window = data[i:i + box_size, j:j + box_size, k:k + box_size]
+                    sums.append(np.sum(window))
+
+        sums = np.array(sums)
+        mean = np.mean(sums)
+        variance = np.var(sums)
+
+        # Calculate lacunarity
+        lacunarity = variance / (mean ** 2) if mean != 0 else 0
+        fractal_lacunarity.append(lacunarity)
+
+        # 在当前最大box大小下，计算多个分形维数
+        counts = []
+        inner_box_sizes = np.logspace(np.log10(min_box_size), np.log10(box_size), num=5, endpoint=True, dtype=int)
+        inner_box_sizes = np.unique(inner_box_sizes)  # 去重
+
+        for inner_box_size in inner_box_sizes:
+            if inner_box_size >= 1:
+                counts.append(box_counting(data, inner_box_size))
+
+        # 检查是否有足够的数据点进行线性拟合
+        if len(counts) > 1:
+            log_box_sizes = np.log(inner_box_sizes)
+            log_counts = np.log(counts)
+
+            # 执行线性拟合
+            try:
+                coeffs = np.polyfit(log_box_sizes, log_counts, 1)
+                fractal_dim = -coeffs[0]
+                if not np.isnan(fractal_dim):
+                    fractal_dimensions.append(fractal_dim)
+            except np.linalg.LinAlgError:
+                # 忽略无法拟合的数据点
+                continue
+    # 计算分形维数的统计指标
+    features = {'FractalMin': np.min(fractal_dimensions),
+                'FractalMax': np.max(fractal_dimensions),
+                'FractalMean': np.mean(fractal_dimensions),
+                'FractalSTD': np.std(fractal_dimensions),
+                'LacunarityMin': np.min(fractal_lacunarity),
+                'LacunarityMax': np.max(fractal_lacunarity),
+                'LacunarityMean': np.mean(fractal_lacunarity),
+                'LacunaritySTD': np.std(fractal_lacunarity), }
+    features.update(get_percentile(fractal_dimensions, prefix='Fractal'))
+    features.update(get_percentile(fractal_lacunarity, prefix='Lacunarity'))
+    return {f"original_fractal_{k}": v for k, v in features.items()}
+
+
+
 def get_image_mask_from_dir(path, images=None, masks=None):
     items = os.listdir(path)
     images = images or 'images'
